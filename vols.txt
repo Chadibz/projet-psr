@@ -1,0 +1,2 @@
+RéférenceVol    Destination    Nombre Places   Prix Place
+1000             Paris          20              500

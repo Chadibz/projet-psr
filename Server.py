@@ -57,7 +57,7 @@ class gerer_clients(threading.Thread):
             ch = ch+'POSITIVE'+' '
             ch = ch+str(random.randint(0, int(val)))
         self.conn.send(bytes(ch, format))
-        compte = open('comptes.txt', 'a+')
+        compte = open('vols.txt', 'a+')
         compte.write(ch+"\n")
         compte.close()
 # -----------------------------------------------------------------------------------------
@@ -68,11 +68,11 @@ class gerer_clients(threading.Thread):
             self.conn.send(
                 bytes("1/PULL REQUEST \n 2/ADD \n 3/RECIEVE BILL", format))
             choix = int(self.receive())
-            compte = open('comptes.txt', 'r')
+            compte = open('vols.txt', 'r')
             historique = open('histo.txt', 'a+')
             lines = compte.readlines()
             compte.close()
-            compte = open('comptes.txt', 'w')
+            compte = open('vols.txt', 'w')
             while (choix not in range(1, 4)):
                 self.conn.send(bytes("WRONG CHOICE ! \n", format))
                 self.conn.send(
@@ -278,7 +278,7 @@ def voir_compte():
     tableview.heading(2, text="ACCOUNT VALUE")
     tableview.heading(3, text="ACCOUNT STATE")
     tableview.heading(4, text="ACCOUNT limit")
-    compte = open('comptes.txt', 'r')
+    compte = open('vols.txt', 'r')
     lines = compte.readlines()
     compte.close()
     for line in lines:
@@ -382,7 +382,7 @@ def exist_facture(ch):
 
 
 def charger_ref_existant():
-    compte = open("comptes.txt", "r")
+    compte = open("vols.txt", "r")
     lines = compte.readlines()
     compte.close()
     for line in lines:
