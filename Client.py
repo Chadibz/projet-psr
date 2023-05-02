@@ -8,7 +8,7 @@ buf = 1024
 PORT = 5050
 format = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.1.13"
+SERVER = "192.168.1.133"
 ADDR = (SERVER, PORT)
 
 # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

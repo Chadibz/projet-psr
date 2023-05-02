@@ -11,11 +11,11 @@ from tkinter.ttk import Treeview
 buf = 1024
 format = "utf8"
 PORT = 5050
-ref_compte = []
+ref_vols = []
 tester_conx = False
 # SERVER = socket.gethostbyname(socket.gethostname())
-SERVER = '192.168.1.13'
-bank_mutex = threading.Lock()
+SERVER = '192.168.1.133'
+vol_mutex = threading.Lock()
 
 ADDR = (SERVER, PORT)
 DISCONNECT_MESSAGE = "!DISCONNECT"
@@ -34,45 +34,33 @@ class gerer_clients(threading.Thread):
         self.details = details
 
     def exist(self, ch):
-        for i in ref_compte:
+        for i in ref_vols:
             if str(ch) == i:
                 return True
         return False
 # ---------------------------------------------------------------------------------------
 
-    def creer_compte(self, ref):
-        ref_compte.append(ref)
+    def creer_vols(self, ref):
+        ref_vols.append(ref)
         ch = ref
-        self.conn.send(bytes('**** ENTER YOUR INFORMATION ****', format))
-        self.conn.send(bytes("GIVE YOUR ACCOUNT'S ID", format))
-        val = self.receive()
-        ch = ch+' '+val+' '
         self.conn.send(
-            bytes("ACOUNT STATE \n 1/ Negative 2/ Positive", format))
-        msg = self.receive()
-        if (int(msg) == 1):
-            ch = ch+'NEGATIVE'+' '
-            ch = ch+str(random.randint(int(val), int(val)+300))
-        if (int(msg) == 2):
-            ch = ch+'POSITIVE'+' '
-            ch = ch+str(random.randint(0, int(val)))
-        self.conn.send(bytes(ch, format))
-        compte = open('vols.txt', 'a+')
-        compte.write(ch+"\n")
-        compte.close()
+            bytes('**** GIVE THE REFERENCE OF THE VOL ****', format))
+
+
 # -----------------------------------------------------------------------------------------
 
-    def gerer_compte(self, ref):
+
+    def gerer_vols(self, ref):
         choice = 1
         while choice == 1:
             self.conn.send(
-                bytes("1/PULL REQUEST \n 2/ADD \n 3/RECIEVE BILL", format))
+                bytes("1/DEMANDE DE RESERVATION \n 2/ANNULATION DE RESERVATION \n 3/RECIEVE BILL", format))
             choix = int(self.receive())
-            compte = open('vols.txt', 'r')
+            vols = open('vols.txt', 'r')
             historique = open('histo.txt', 'a+')
-            lines = compte.readlines()
-            compte.close()
-            compte = open('vols.txt', 'w')
+            lines = vols.readlines()
+            vols.close()
+            vols = open('vols.txt', 'w')
             while (choix not in range(1, 4)):
                 self.conn.send(bytes("WRONG CHOICE ! \n", format))
                 self.conn.send(
@@ -83,82 +71,49 @@ class gerer_clients(threading.Thread):
                 for line in lines:
                     Liste_ch = line.split(" ")
                     if (Liste_ch[0] == ref):
-                        bank_mutex.acquire()
-                        self.conn.send(bytes("ENTER THE AMMOUNT", format))
+                        vol_mutex.acquire()
+                        self.conn.send(
+                            bytes("ENTER THE number of PLACE to RESERVATE", format))
                         mont = int(self.receive())
-                        if (Liste_ch[2].upper() == "NEGATIVE"):
-                            if ((int(Liste_ch[1])+mont) > int(Liste_ch[3])):
-                                self.conn.send(
-                                    bytes("YOU HAVE REACHED THE LIMIT !!!", format))
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' '+Liste_ch[2]
-                                his = his+' ' + \
-                                    Liste_ch[3]+' '+'pull request' + \
-                                    ' '+str(mont)+' '+'failed'
-                                historique.write(his+'\n')
-                                compte.write(line)
-                            if (mont+int(Liste_ch[1])) < int(Liste_ch[3]):
-                                self.conn.send(
-                                    bytes("TRANSACTION SUCCESEDED", format))
-                                Liste_ch[1] = str(int(Liste_ch[1])-mont)
-                                tarif = (mont*2)/100
-                                fac = Liste_ch[0]+' '+str(tarif)
-                                facture = open("factures.txt", "a+")
-                                facture.write(fac + "\n")
-                                facture.close()
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' ' + \
-                                    Liste_ch[2]+' '+Liste_ch[3]
-                                fin = his+' '+'Pull request' + \
-                                    ' '+str(mont)+' '+'succeseded'
-                                historique.write(fin+'\n')
-                                compte.write(his)
+                        if (int(Liste_ch[2]) < mont):
+                            self.conn.send(
+                                bytes("YOU HAVE REACHED THE LIMIT !!!", format))
+                            his = Liste_ch[0]+' '
+                            his = Liste_ch[0]+' '
+                            his = his+str(self.details)[18:23]+' '
+                            fin = his+'DEMANDE' +\
+                                ' '+str(mont)+' '+'FAILED'
+                            historique.write(fin+'\n')
+                            vols.write(line)
 
-                        if (Liste_ch[2].upper() == "POSITIVE"):
-                            if (mont > (int(Liste_ch[1])+(int(Liste_ch[1])))):
-                                self.conn.send(
-                                    bytes("You have reached the LIMIT !!! ", format))
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' '+Liste_ch[2]
-                                his = his+' ' + \
-                                    Liste_ch[3]+' '+'pull request' + \
-                                    ' '+str(mont)+' '+'fail'
-                                historique.write(his+'\n')
-                                compte.write(line)
-                            if (mont < int(Liste_ch[1])):
-                                self.conn.send(
-                                    bytes("TRANSACTION SUCCESEDED", format))
-                                Liste_ch[1] = str(int(Liste_ch[1])-mont)
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' ' + \
-                                    Liste_ch[2]+' '+Liste_ch[3]
-                                fin = his+' '+'retrait' + \
-                                    ' '+str(mont)+' '+'succes'
-                                historique.write(fin+'\n')
-                                compte.write(his)
-                            if (mont in range(int(Liste_ch[1]), int(Liste_ch[3])+int(Liste_ch[1]))):
-                                self.conn.send(
-                                    bytes("TRANSACTION SUCCESEDED", format))
-                                Liste_ch[1] = str(mont-int(Liste_ch[1]))
-                                tarif = (mont*2)/100
-                                fac = Liste_ch[0]+' '+str(tarif)
-                                facture = open("factures.txt", "a+")
-                                facture.write(fac + "\n")
-                                facture.close()
-                                Liste_ch[2] = "NEGATIVE"
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' ' + \
-                                    Liste_ch[2]+' '+Liste_ch[3]
-                                fin = his+' '+'retrait' + \
-                                    ' '+str(mont)+' '+'succes'
-                                historique.write(fin+'\n')
-                                compte.write(his)
-                        bank_mutex.release()
+                        elif (int(Liste_ch[2]) >= mont):
+                            self.conn.send(
+                                bytes("RESERVATION SUCCESEDED", format))
+                            tarif = (mont*int(Liste_ch[3]))
+                            fac = Liste_ch[0]+' '+str(tarif)
+                            vols = open("vols.txt", "a+")
+                            facture = open("factures.txt", "a+")
+                            facture.write(fac + "\n")
+                            facture.close()
+                            his = Liste_ch[0]+' '
+                            his = his+str(self.details)[18:23]+' '
+                            fin = his+'DEMANDE' +\
+                                ' '+str(mont)+' '+'succeseded'
+                            historique.write(fin+'\n')
 
+                            # Mark the line as modified
+                            line_modified = True
+                            # Write the modified line to the file
+                            vols.write(Liste_ch[0]+' '+Liste_ch[1] +
+                                       ' '+str(int(Liste_ch[2])-mont)+' '+Liste_ch[3]+'\n')
                     else:
-                        compte.write(line)
+                        # If the line hasn't been modified, write it back to the file
+                        vols.write(line)
+    # Close the file after all modifications have been made
+                vols.close()
+
             if (choix == 2):
-                bank_mutex.acquire()
+                vol_mutex.acquire()
                 for line in lines:
                     Liste_ch = line.split(" ")
                     if (Liste_ch[0] == ref):
@@ -175,7 +130,7 @@ class gerer_clients(threading.Thread):
                                 fin = his+' '+'ajout'+' ' + \
                                     str(mont)+' '+'succes'
                                 historique.write(fin+'\n')
-                                compte.write(his)
+                                vols.write(his)
                             else:
                                 self.conn.send(
                                     bytes("TRANSACTION  SUCCESEDED", format))
@@ -186,7 +141,7 @@ class gerer_clients(threading.Thread):
                                     Liste_ch[2]+' '+Liste_ch[3]
                                 fin = his+' '+'add'+' '+str(mont)+' '+'succes'
                                 historique.write(fin+'\n')
-                                compte.write(his)
+                                vols.write(his)
 
                         else:
                             self.conn.send(
@@ -197,11 +152,11 @@ class gerer_clients(threading.Thread):
                                 Liste_ch[2]+' '+Liste_ch[3]
                             fin = his+' '+'ajout'+' '+str(mont)+' '+'succes'
                             historique.write(fin+'\n')
-                            compte.write(his)
+                            vols.write(his)
 
                     else:
-                        compte.write(line)
-                bank_mutex.release()
+                        vols.write(line)
+                vol_mutex.release()
 
             if (choix == 3):
                 if (exist_facture(ref) == False):
@@ -248,29 +203,29 @@ class gerer_clients(threading.Thread):
         self.conn.send(
             bytes("HELLO, please enter your account's reference", format))
         ch = self.receive()
-        print(ref_compte)
+        print(ref_vols)
 
         if (exist(ch) == False):
-            self.creer_compte(ch)
-            self.gerer_compte(ch)
+            self.creer_vols(ch)
+            self.gerer_vols(ch)
         else:
-            self.gerer_compte(ch)
+            self.gerer_vols(ch)
 # --------------------------------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------------------------------
 
 
 def exist(ch):
-    for i in ref_compte:
+    for i in ref_vols:
         if str(ch) == i:
             return True
     return False
 # ----------------------------------------------------------
 
 
-def voir_compte():
+def voir_vols():
     view = Toplevel(scene)
-    view.title("CHECK ACCOUNTS")
+    view.title("CHECK  VOLS")
     ch = Label(view, text="**** HELLO ****")
     ch.pack()
     tableview = Treeview(view, columns=(1, 2, 3, 4), heigh=14, show="headings")
@@ -278,9 +233,9 @@ def voir_compte():
     tableview.heading(2, text="Destination")
     tableview.heading(3, text="Nombre Places")
     tableview.heading(4, text="Prix Place")
-    compte = open('vols.txt', 'r')
-    lines = compte.readlines()
-    compte.close()
+    vols = open('vols.txt', 'r')
+    lines = vols.readlines()
+    vols.close()
     for line in lines:
         Liste_ch = line.split(' ')
         tableview.insert('', END, values=Liste_ch)
@@ -301,9 +256,9 @@ def chercher_facture(event=None):
             1, 2), heigh=14, show="headings")
         tableview.heading(1, text="Account Reference ")
         tableview.heading(2, text="Pay ammount")
-        compte = open('factures.txt', 'r')
-        lines = compte.readlines()
-        compte.close()
+        vols = open('factures.txt', 'r')
+        lines = vols.readlines()
+        vols.close()
         for line in lines:
             parcour = line.split(' ')
             if (parcour[0] == ref):
@@ -333,30 +288,31 @@ def consulter_facture():
 # -------------------------------------------------------------------------------------------------
 
 
-def consulter_histrorique():
+def consulter_historique():
     view = Toplevel(scene)
     view.title("CHECK HISTORY")
     ch = Label(view, text="**** HELLO ****")
     ch.pack()
-    tableview = Treeview(view, columns=(
-        1, 2, 3, 4, 5, 6, 7), heigh=20, show="headings")
-    tableview.heading(1, text="Account References")
-    tableview.heading(2, text="Value after transaction")
-    tableview.heading(3, text="State after transaction")
-    tableview.heading(4, text="Account Plafond du compte")
-    tableview.heading(5, text="operation")
-    tableview.heading(6, text="Amount Value ")
-    tableview.heading(7, text="fail/succes")
-    compte = open('histo.txt', 'r')
-    lines = compte.readlines()
-    compte.close()
-    for i in range(0, len(lines)-1, 2):
-        parcour1 = lines[i].split(" ")
-        parcour2 = lines[i+1].split(" ")
-        parcour = parcour1+parcour2[1:4]
-        tableview.insert('', END, values=parcour)
+    tableview = Treeview(view, columns=(1, 2, 3, 4, 5),
+                         height=20, show="headings")
+    tableview.heading(1, text="Référence Vol")
+    tableview.heading(2, text="Agence")
+    tableview.heading(3, text="Transaction")
+    tableview.heading(4, text="Value ")
+    tableview.heading(5, text="fail/succes")
+    with open('histo.txt', 'r') as f:
+        lines = f.readlines()
+        for i in range(len(lines)):
+            parcour1 = lines[i].split(" ")
+            if i < len(lines)-1:
+                parcour2 = lines[i+1].split(" ")
+                parcour = parcour1 + parcour2[1:4]
+            else:
+                parcour = parcour1 + [''] * 3  # add empty values for last row
+            tableview.insert('', END, values=parcour)
 
     tableview.pack()
+
 
 # ---------------------------------------------------------------------------------------------------
 
@@ -368,9 +324,9 @@ def quitter():
 
 def exist_facture(ch):
     ref_facture = []
-    compte = open("factures.txt", "r")
-    lines = compte.readlines()
-    compte.close()
+    vols = open("factures.txt", "r")
+    lines = vols.readlines()
+    vols.close()
     for line in lines:
         ref = line.split(" ")
         ref_facture.append(ref[0])
@@ -382,12 +338,12 @@ def exist_facture(ch):
 
 
 def charger_ref_existant():
-    compte = open("vols.txt", "r")
-    lines = compte.readlines()
-    compte.close()
+    vols = open("vols.txt", "r")
+    lines = vols.readlines()
+    vols.close()
     for line in lines:
         ref = line.split(" ")
-        ref_compte.append(ref[0])
+        ref_vols.append(ref[0])
 
 
 # ---------------------------------------------------------------------------------------------------
@@ -417,9 +373,9 @@ firstmenu.add_command(
     label="Started ", command=threading.Thread(target=start).start())
 firstmenu.add_separator()
 firstmenu.add_command(label="Quit", command=scene.destroy)
-mainmenu.add_command(label="CHECK ACCOUNTS", command=voir_compte)
+mainmenu.add_command(label="CHECK  VOLS", command=voir_vols)
 mainmenu.add_command(label="CHECK BILLS ", command=consulter_facture)
-mainmenu.add_command(label="CHECK HISTORY", command=consulter_histrorique)
+mainmenu.add_command(label="CHECK HISTORY", command=consulter_historique)
 
 
 scene.config(menu=mainmenu)
