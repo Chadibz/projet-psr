@@ -49,14 +49,13 @@ class gerer_clients(threading.Thread):
 
 # -----------------------------------------------------------------------------------------
 
-
     def gerer_vols(self, ref):
         choice = 1
         while choice == 1:
             self.conn.send(
                 bytes("1/DEMANDE DE RESERVATION \n 2/ANNULATION DE RESERVATION \n 3/RECIEVE BILL", format))
             choix = int(self.receive())
-            vols = open('vols.txt', 'r')
+            vols = open('vols.txt', 'r+')
             historique = open('histo.txt', 'a+')
             lines = vols.readlines()
             vols.close()
@@ -64,7 +63,7 @@ class gerer_clients(threading.Thread):
             while (choix not in range(1, 4)):
                 self.conn.send(bytes("WRONG CHOICE ! \n", format))
                 self.conn.send(
-                    bytes("1/PULL REQUEST \n 2/ADD \n 3/RECIEVE BILL", format))
+                    bytes("1/DEMANDE DE RESERVATION \n 2/ANNULATION DE RESERVATION \n 3/RECIEVE BILL", format))
                 choix = int(self.receive())
 
             if (choix == 1):
@@ -90,7 +89,7 @@ class gerer_clients(threading.Thread):
                             self.conn.send(
                                 bytes("RESERVATION SUCCESEDED", format))
                             tarif = (mont*int(Liste_ch[3]))
-                            fac = Liste_ch[0]+' '+str(tarif)
+                            fac = str(self.details)[18:23]+' '+str(tarif)
                             vols = open("vols.txt", "a+")
                             facture = open("factures.txt", "a+")
                             facture.write(fac + "\n")
@@ -113,50 +112,49 @@ class gerer_clients(threading.Thread):
                 vols.close()
 
             if (choix == 2):
-                vol_mutex.acquire()
+
                 for line in lines:
                     Liste_ch = line.split(" ")
                     if (Liste_ch[0] == ref):
-                        self.conn.send(bytes("ENTER THE AMMOUNT", format))
+                        vol_mutex.acquire()
+                        self.conn.send(
+                            bytes("ENTER THE number of PLACE to CANCEL", format))
                         mont = int(self.receive())
-                        if (Liste_ch[2].upper() == "NEGATIVE"):
-                            if (int(Liste_ch[1]) > mont):
-                                self.conn.send(
-                                    bytes("TRANSACTION  SUCCESEDED", format))
-                                Liste_ch[1] = str(int(Liste_ch[1])-mont)
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' ' + \
-                                    Liste_ch[2]+' '+Liste_ch[3]
-                                fin = his+' '+'ajout'+' ' + \
-                                    str(mont)+' '+'succes'
-                                historique.write(fin+'\n')
-                                vols.write(his)
-                            else:
-                                self.conn.send(
-                                    bytes("TRANSACTION  SUCCESEDED", format))
-                                Liste_ch[1] = str(mont-int(Liste_ch[1]))
-                                Liste_ch[2] = "POSITIVE"
-                                his = Liste_ch[0]+' '
-                                his = his+Liste_ch[1]+' ' + \
-                                    Liste_ch[2]+' '+Liste_ch[3]
-                                fin = his+' '+'add'+' '+str(mont)+' '+'succes'
-                                historique.write(fin+'\n')
-                                vols.write(his)
-
+                        if (int(Liste_ch[2]) < mont):
+                            self.conn.send(
+                                bytes("YOU CAN'T CANCEL MORE THAN YOU RESERVED !!!", format))
+                            his = Liste_ch[0]+' '
+                            his = Liste_ch[0]+' '
+                            his = his+str(self.details)[18:23]+' '
+                            fin = his+'ANNULATION' +\
+                                ' '+str(mont)+' '+'FAILED'
+                            historique.write(fin+'\n')
+                            vols.write(line)
                         else:
                             self.conn.send(
-                                bytes("TRANSACTION SUCCESEDED", format))
-                            Liste_ch[1] = str(int(Liste_ch[1])+mont)
+                                bytes("CANCELATION SUCCESEDED", format))
+                            tarif = (mont*int(Liste_ch[3]))*0.1
+                            fac = str(self.details)[18:23]+' -'+str(tarif)
+                            vols = open("vols.txt", "a+")
+                            facture = open("factures.txt", "a+")
+                            facture.write(fac + "\n")
+                            facture.close()
                             his = Liste_ch[0]+' '
-                            his = his+Liste_ch[1]+' ' + \
-                                Liste_ch[2]+' '+Liste_ch[3]
-                            fin = his+' '+'ajout'+' '+str(mont)+' '+'succes'
+                            his = his+str(self.details)[18:23]+' '
+                            fin = his+'ANNULATION' +\
+                                ' '+str(mont)+' '+'succeseded'
                             historique.write(fin+'\n')
-                            vols.write(his)
 
+                            # Mark the line as modified
+                            line_modified = True
+                            # Write the modified line to the file
+                            vols.write(Liste_ch[0]+' '+Liste_ch[1] +
+                                       ' '+str(int(Liste_ch[2])-mont)+' '+Liste_ch[3]+'\n')
                     else:
+                        # If the line hasn't been modified, write it back to the file
                         vols.write(line)
-                vol_mutex.release()
+        # Close the file after all modifications have been made
+                vols.close()
 
             if (choix == 3):
                 if (exist_facture(ref) == False):
@@ -168,23 +166,19 @@ class gerer_clients(threading.Thread):
                     somme = 0.0
                     for line in lines:
                         Liste_ch = line.split(' ')
-                        if (Liste_ch[0] == ref):
+                        if (Liste_ch[0] == str(self.details)[18:23]):
                             somme += float(Liste_ch[1][0] +
                                            Liste_ch[1][1]+Liste_ch[1][2])
                     self.conn.send(bytes("**** YOUR BILLS **** ", format))
                     self.conn.send(
                         bytes(str(somme)+" dt , THANK YOU FOR YOUR PAYMENT ", format))
-
             self.conn.send(
                 bytes("YOU WANT TO RETURN TO MAIN MENU ! \n 1/YES \t 2/NO", format))
             choice = int(self.receive())
             if (choice == 2):
                 self.conn.send(bytes("SEE YA", format))
                 self.receive()
-
-
 # -------------------------------------------------------------------------------------------
-
 
     def receive(self):
         ch = self.conn.recv(buf).decode(format)
@@ -201,7 +195,7 @@ class gerer_clients(threading.Thread):
         scene.update()
 
         self.conn.send(
-            bytes("HELLO, please enter your account's reference", format))
+            bytes("GIVE THE REFERENCE OF THE VOL", format))
         ch = self.receive()
         print(ref_vols)
 
@@ -212,6 +206,27 @@ class gerer_clients(threading.Thread):
             self.gerer_vols(ch)
 # --------------------------------------------------------------------------------------------------
 
+    def rerun(self):
+        while True:
+            self.conn.send(
+                bytes("GIVE THE REFERENCE OF THE VOL (type 'menu' to return to main menu)", format))
+            ch = self.receive()
+            print(ref_vols)
+
+            if ch.lower() == 'menu':
+                self.conn.send(bytes("Returning to main menu...", format))
+                break
+
+            while ch == '':
+                self.conn.send(
+                    bytes("Please enter a valid reference", format))
+                ch = self.receive()
+
+            if exist(ch):
+                self.gerer_vols(ch)
+            else:
+                self.creer_vols(ch)
+                self.gerer_vols(ch)
 # ---------------------------------------------------------------------------------------------------
 
 

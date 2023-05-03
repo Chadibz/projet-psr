@@ -44,7 +44,7 @@ def exitscene(event=None):
 
 # --------------------------------------------------------------------
 scene = Tk()
-scene.title("CLIENT TRANSACTION")
+scene.title("AGNECE TRANSACTION")
 messages_frame = Frame(scene)
 my_msg = StringVar()
 scrollbar = Scrollbar(messages_frame)
