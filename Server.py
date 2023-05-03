@@ -13,8 +13,8 @@ format = "utf8"
 PORT = 5050
 ref_vols = []
 tester_conx = False
-# SERVER = socket.gethostbyname(socket.gethostname())
-SERVER = '192.168.1.133'
+SERVER = socket.gethostbyname(socket.gethostname())
+# SERVER = '192.168.1.133'
 vol_mutex = threading.Lock()
 
 ADDR = (SERVER, PORT)
@@ -48,6 +48,7 @@ class gerer_clients(threading.Thread):
 
 
 # -----------------------------------------------------------------------------------------
+
 
     def gerer_vols(self, ref):
         choice = 1
