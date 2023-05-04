@@ -14,7 +14,7 @@ PORT = 5050
 ref_vols = []
 tester_conx = False
 SERVER = socket.gethostbyname(socket.gethostname())
-# SERVER = '192.168.1.133'
+# SERVER = '192.168.1.133's
 vol_mutex = threading.Lock()
 
 ADDR = (SERVER, PORT)
@@ -150,7 +150,7 @@ class gerer_clients(threading.Thread):
                             line_modified = True
                             # Write the modified line to the file
                             vols.write(Liste_ch[0]+' '+Liste_ch[1] +
-                                       ' '+str(int(Liste_ch[2])-mont)+' '+Liste_ch[3]+'\n')
+                                       ' '+str(int(Liste_ch[2])+mont)+' '+Liste_ch[3]+'\n')
                     else:
                         # If the line hasn't been modified, write it back to the file
                         vols.write(line)
@@ -265,7 +265,7 @@ def chercher_facture(event=None):
     somme = 0.0
     valeur = []
     if (exist_facture(ref) == False):
-        ch = Label(viewfac, text="No bill for this account")
+        ch = Label(viewfac, text="No bill for this agence")
         ch.pack()
     else:
         tableview = Treeview(viewfac, columns=(

@@ -8,7 +8,7 @@ buf = 1024
 PORT = 5050
 format = 'utf-8'
 DISCONNECT_MESSAGE = "!DISCONNECT"
-SERVER = "192.168.1.158"
+SERVER = "192.168.1.133"
 ADDR = (SERVER, PORT)
 
 # client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -44,7 +44,7 @@ def exitscene(event=None):
 
 # --------------------------------------------------------------------
 scene = Tk()
-scene.title("AGNECE TRANSACTION")
+scene.title("AGENCE DE VOYAGE")
 messages_frame = Frame(scene)
 my_msg = StringVar()
 scrollbar = Scrollbar(messages_frame)
